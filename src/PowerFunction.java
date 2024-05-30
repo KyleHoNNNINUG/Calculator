@@ -59,7 +59,7 @@ public class PowerFunction extends Function{
         if (func.power == 1) chain1 = new ConstantFunction(func.getCoefficient());
         else chain1 = new PowerFunction(func.getCoefficient() * func.power, func.getInput(), func.power-1);
         if (chain1.getCoefficient() == 0) chain1 = Function.ZERO;
-        Function chain2 = func.getInput() == null ? null : Function.getDerivative(func.getInput());
+        Function chain2 = func.getInput() == null ? new ConstantFunction(1) : Function.getDerivative(func.getInput());
         Function result = CompoundFunction.multiply(chain1, chain2);
         return result.equals(Function.ZERO) ? Function.ZERO : result;
     }
