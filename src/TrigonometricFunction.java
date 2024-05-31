@@ -61,7 +61,7 @@ public class TrigonometricFunction extends Function{
                 chain1 = new Function(0, "default", null);
             }
         }
-        Function chain2 = func.getInput() == null ? null : Function.getDerivative(func.getInput());
+        Function chain2 = func.getInput() == null ? new ConstantFunction(1) : Function.getDerivative(func.getInput());
         return CompoundFunction.multiply(chain1, chain2);
     }
 }

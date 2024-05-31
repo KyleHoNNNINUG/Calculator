@@ -58,6 +58,11 @@ public class Function {
                 return this.equals(Math.pow(other.input.getCoefficient(), ((PowerFunction)other).getPower()) * other.getCoefficient());
             else if (other.input == null && other.coefficient == 1 && ((PowerFunction)other).getPower() == 1 && this.type.equals("identity"))
                 return true;
+        // one-element compound function
+        if (this.type.equals("compound") && ((CompoundFunction)this).getFunctions().size() == 1)
+            return CompoundFunction.multiply(((CompoundFunction)this).getFunctions().get(0), this.getCoefficient()).equals(other);
+        if (other.type.equals("compound") && ((CompoundFunction)other).getFunctions().size() == 1)
+            return CompoundFunction.multiply(((CompoundFunction)other).getFunctions().get(0), other.getCoefficient()).equals(this);
         // unequal function types
         if (!this.type.equals(other.getType())) return false;
         // respective criteria for different function types
@@ -178,5 +183,11 @@ public class Function {
             }
         }
         return new Function(0, "default", null);
+    }
+
+    public static Function getDerivative(Function func, int degree) {
+        for (int i = 0; i < degree; i++)
+            func = getDerivative(func);
+        return func;
     }
 }

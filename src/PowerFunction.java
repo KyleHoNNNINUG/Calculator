@@ -17,7 +17,9 @@ public class PowerFunction extends Function{
     @Override
     public String toString() {
         String coeff = "";
-        if (this.getCoefficient() != 1) {
+        if (this.getCoefficient() == -1)
+            coeff = "-";
+        else if (this.getCoefficient() != 1) {
             int checker = (int)getCoefficient();
             if (checker == getCoefficient())
                 coeff += checker;
