@@ -230,7 +230,7 @@ public class Function {
     }
 
     public static Function getDerivative(Function func, int degree) {
-        for (int i = 0; i < degree; i++)
+        for (int i = 1; i <= degree; i++)
             func = getDerivative(func);
         return func;
     }
@@ -242,5 +242,19 @@ public class Function {
     public static void printDerivative(Function func, String funcName) {
         System.out.println(funcName + "(x) = " + (func == null ? "x" : func));
         System.out.println(funcName + "'(x) = " + getDerivative(func));
+    }
+
+    public static void printDerivative(Function func, int degree) {
+        printDerivative(func, "f", degree);
+    }
+
+    public static void printDerivative(Function func, String funcName, int degree) {
+        String d = "";
+        for (int i = 0; i <= degree; i++) {
+            if (i >= 1 && i <= 3) d += "'";
+            else if (i > 3) d = "^(" + i + ")";
+            System.out.println(funcName + d + "(x) = " + func);
+            func = getDerivative(func);
+        }
     }
 }

@@ -25,8 +25,8 @@ public class CompoundFunction extends Function{
         return new CompoundFunction(this.compoundType, 1, this.functions);
     }
 
-    @Override
     @SuppressWarnings("all")
+    @Override
     public CompoundFunction clone() {
         boolean newCompoundType = this.compoundType;
         double newCoeff = this.getCoefficient();

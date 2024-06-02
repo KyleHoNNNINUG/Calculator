@@ -47,7 +47,7 @@ public class PowerFunction extends Function{
                 return coeff;
             else if (this.power > 0 && getInput().getType().equals("trigonometric")) {
                 TrigonometricFunction inner = (TrigonometricFunction)(getInput());
-                String innerInner = inner.getInput() == null ? "x" : "(" + inner.getInput().toString() + ")";
+                String innerInner = "(" + (inner.getInput() == null ? "x" : inner.getInput().toString()) + ")";
                 return coeff + inner.getTrigType() + pow + innerInner;
             }
             else 

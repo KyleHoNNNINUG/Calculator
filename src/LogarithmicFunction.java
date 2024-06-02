@@ -26,6 +26,12 @@ public class LogarithmicFunction extends Function{
     @Override
     public String toString() {
         if (this.getCoefficient() == 0) return "0";
+        if (getInput() != null && getInput().getType().equals("exponential") && this.base == ((ExponentialFunction)getInput()).getBase()) {
+            Function newWithoutAppendix = CompoundFunction.multiply(getInput().getInput(), this.getCoefficient());
+            Function appendix = Function.ZERO;
+            if (getInput().getCoefficient() != 1) appendix = new LogarithmicFunction(this.getCoefficient(), new ConstantFunction(getInput().getCoefficient()), this.base);
+            return (CompoundFunction.sum(newWithoutAppendix, appendix)).toString();
+        }
         String coeff = "";
         if (this.getCoefficient() == -1)
             coeff = "-";
