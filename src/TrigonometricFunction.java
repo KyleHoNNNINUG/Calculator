@@ -16,11 +16,12 @@ public class TrigonometricFunction extends Function{
     }
 
     public boolean equalsTrigonometric(TrigonometricFunction other) {
-        return this.getTrigType().equals(other.getTrigType());
+        return this.trigType.equals(other.trigType);
     }
 
     @Override
     public String toString() {
+        if (this.getCoefficient() == 0) return "0";
         String coeff = "";
         if (this.getCoefficient() == -1)
             coeff = "-";

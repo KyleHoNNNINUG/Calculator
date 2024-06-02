@@ -11,11 +11,13 @@ public class PowerFunction extends Function{
     }
 
     public boolean equalsPower(PowerFunction other) {
-        return this.power == other.getPower();
+        return this.power == other.power;
     }
 
     @Override
     public String toString() {
+        if (this.getCoefficient() == 0) return "0";
+        if (this.equals(1)) return "1";
         String coeff = "";
         if (this.getCoefficient() == -1)
             coeff = "-";
@@ -36,13 +38,16 @@ public class PowerFunction extends Function{
                 pow += this.power;
         }
         if (this.power != 0)
-            if (getInput() == null)
-                return coeff + "x" + pow;
+            if (getInput() == null) {
+                String inner = "x" + pow;
+                if (this.power < 1) inner = "(" + inner + ")";
+                return coeff + inner;
+            }
             else if (getInput().equals(1))
                 return coeff;
-            else if (getInput().getType().equals("trigonometric")) {
+            else if (this.power > 0 && getInput().getType().equals("trigonometric")) {
                 TrigonometricFunction inner = (TrigonometricFunction)(getInput());
-                String innerInner = inner.getInput() == null ? "(x)" : "(" + inner.getInput().toString() + ")";
+                String innerInner = inner.getInput() == null ? "x" : "(" + inner.getInput().toString() + ")";
                 return coeff + inner.getTrigType() + pow + innerInner;
             }
             else 

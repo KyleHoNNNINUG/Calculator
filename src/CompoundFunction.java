@@ -25,6 +25,16 @@ public class CompoundFunction extends Function{
         return new CompoundFunction(this.compoundType, 1, this.functions);
     }
 
+    @Override
+    @SuppressWarnings("all")
+    public CompoundFunction clone() {
+        boolean newCompoundType = this.compoundType;
+        double newCoeff = this.getCoefficient();
+        @SuppressWarnings("unchecked")
+        ArrayList<Function> newFunctions = (ArrayList<Function>)this.functions.clone();
+        return new CompoundFunction(newCompoundType, newCoeff, newFunctions);
+    }
+
     // Precondition: ArrayList<Function> functions of both CompoundFunction objects have more than 1 element
     public boolean equalsCompound(Function other) {
         if (other.getType().equals("compound")) {
@@ -98,7 +108,9 @@ public class CompoundFunction extends Function{
             double coeff = this.getCoefficient();
             for (Function func: this.functions) {
                 coeff *= func.getCoefficient();
-                r += "(" + func.withoutCoeff().toString() + ")";
+                String inner = func.withoutCoeff().toString();
+                if (!inner.equals("x")) inner = "(" + inner + ")";
+                r += inner;
             }
             if (coeff == -1) r = "-" + r;
             else if (coeff != 1) {
@@ -117,6 +129,7 @@ public class CompoundFunction extends Function{
                 else
                     r += Math.abs(this.getCoefficient());
             }
+            if (this.getCoefficient() != 1) r += "(";
             for (int i = 0; i < this.functions.size(); i++) {
                 String next = this.functions.get(i).toString();
                 if (!next.substring(0,1).equals("-")) {
@@ -128,6 +141,7 @@ public class CompoundFunction extends Function{
                     else r += "-" + next.substring(1);
                 }
             }
+            if (this.getCoefficient() != 1) r += ")";
         }
         return r;
     }
@@ -169,6 +183,16 @@ public class CompoundFunction extends Function{
         }
     }
 
+    public boolean pickOut(Function func) {
+        for (int i = 0; i < this.functions.size(); i++) {
+            if (this.functions.get(i).equals(func)) {
+                this.functions.remove(i);
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static Function sum(Function func, double num) {
         return sum(func, new ConstantFunction(num));
     }
@@ -182,6 +206,11 @@ public class CompoundFunction extends Function{
         if (func2 == null) return sum(func1, new PowerFunction(1, null, 1));
         if (func1.equals(Function.ZERO)) return func2;
         if (func2.equals(Function.ZERO)) return func1;
+        // logarithmic(constant) == 1 case
+        if (func1.getType().equals("logarithmic") && func1.getInput() != null && func1.getInput().equals(((LogarithmicFunction)func1).getBase())) 
+            return sum(new ConstantFunction(func1.getCoefficient()), func2);
+        if (func2.getType().equals("logarithmic") && func2.getInput() != null && func2.getInput().equals(((LogarithmicFunction)func2).getBase()))
+            return sum(func1, new ConstantFunction(func2.getCoefficient()));
         if (!(func1.getType().equals("compound") && ((CompoundFunction)func1).getCompoundType().equals("sum")) && 
             !(func2.getType().equals("compound") && ((CompoundFunction)func2).getCompoundType().equals("sum"))) {
             // sum of trig square cases
@@ -231,11 +260,18 @@ public class CompoundFunction extends Function{
                         return new CompoundFunction(false, 1, new ArrayList<>(Arrays.asList(resultFunction, new ConstantFunction(remain))));
                     }
                 }
-                else if (func2.equals(func2.getCoefficient())) return new ConstantFunction(func1.getCoefficient() * func2.getCoefficient());
+                else if (func2.equals(func2.getCoefficient())) return new ConstantFunction(func1.getCoefficient() + func2.getCoefficient());
             }
             // functions identical if without coefficient
-            if (func1.withoutCoeff().equals(func2.withoutCoeff()))
+            if (func1.withoutCoeff().equals(func2.withoutCoeff())) {
                 return multiply(func1.withoutCoeff(), func1.getCoefficient() + func2.getCoefficient());
+            }
+            // same-base logarithmic functions
+            if (func1.getType().equals("logarithmic") && func2.getType().equals("logarithmic") && 
+                (((LogarithmicFunction)func1).getBase() == ((LogarithmicFunction)func2).getBase() ||
+                (Function.approxE(((LogarithmicFunction)func1).getBase()) != 0 &&
+                (Function.approxE(((LogarithmicFunction)func1).getBase()) == Function.approxE(((LogarithmicFunction)func2).getBase())))))
+                return new LogarithmicFunction(func1.getCoefficient() * func2.getCoefficient(), multiply(func1.getInput(), func2.getInput()), ((LogarithmicFunction)func1).getBase());
             // different functions
             else
                 return new CompoundFunction(false, 1, new ArrayList<>(Arrays.asList(func1,func2)));
@@ -262,14 +298,15 @@ public class CompoundFunction extends Function{
             }
         else {
             Function r = func1;
-            for (Function func: ((CompoundFunction)func2).functions) r = sum(r, func);
+            for (Function func: ((CompoundFunction)func2).functions) r = sum(r, multiply(func, func2.getCoefficient()));
             return r;
         }
     }
 
     public static Function multiply(Function func, double coeff) {
-        if (coeff == 1) return func;
         if (coeff == 0) return Function.ZERO;
+        if (func == null) return multiply(Function.IDENTITY, coeff);
+        if (coeff == 1) return func;
         switch (func.getType()) {
             case "power" -> {
                 return new PowerFunction(func.getCoefficient() * coeff, func.getInput(), ((PowerFunction)func).getPower());
@@ -277,11 +314,14 @@ public class CompoundFunction extends Function{
             case "trigonometric" -> {
                 return new TrigonometricFunction(func.getCoefficient() * coeff, func.getInput(), ((TrigonometricFunction)func).getTrigType());
             }
+            case "logarithmic" -> {
+                return new LogarithmicFunction(func.getCoefficient() * coeff, func.getInput(), ((LogarithmicFunction)func).getBase());
+            }
+            case "exponential" -> {
+                return new ExponentialFunction(func.getCoefficient() * coeff, func.getInput(), ((ExponentialFunction)func).getBase());
+            }
             case "compound" -> {
                 return new CompoundFunction(((CompoundFunction)func).getCompoundType().equals("multiply"), func.getCoefficient() * coeff, ((CompoundFunction)func).getFunctions());
-            }
-            case "identity" -> {
-                return new PowerFunction(coeff, null, 1);
             }
             case "zero" -> {                
                 return Function.ZERO;
@@ -297,31 +337,68 @@ public class CompoundFunction extends Function{
     }
 
     public static Function multiply(Function func1, Function func2) {
-        // null/identity function case (turn back to power function)
-        if (func1 == null || func1.getType().equals("identity")) return multiply(new PowerFunction(1, null, 1), func2);
-        if (func2 == null || func2.getType().equals("identity")) return multiply(func1, new PowerFunction(1, null, 1));
+        // null function case (turn back to power function)
+        if (func1 == null) return multiply(new PowerFunction(1, null, 1), func2);
+        if (func2 == null) return multiply(func1, new PowerFunction(1, null, 1));
+        // multiply by 1 case
+        if (func1.equals(1)) return multiply(func2, 1);
+        if (func2.equals(1)) return multiply(func1, 1);
         // zero function case
         if (func1.equals(Function.ZERO) || func2.equals(Function.ZERO)) return Function.ZERO;
+        // logarithmic(constant) == 1 case
+        if (func1.getType().equals("logarithmic") && func1.getInput() != null && func1.getInput().equals(((LogarithmicFunction)func1).getBase())) 
+            return multiply(new ConstantFunction(func1.getCoefficient()), func2);
+        if (func2.getType().equals("logarithmic") && func2.getInput() != null && func2.getInput().equals(((LogarithmicFunction)func2).getBase()))
+            return multiply(func1, new ConstantFunction(func2.getCoefficient()));
         // constant function case
         if (func1.getType().equals("constant")) return multiply(func2, func1.getCoefficient());
         if (func2.getType().equals("constant")) return multiply(func1, func2.getCoefficient());
-        // different type functions case (except compound)
+        // base-1 exponential case
+        if (func1.getType().equals("exponential") && ((ExponentialFunction)func1).getBase() == 1) return func2;
+        if (func2.getType().equals("exponential") && ((ExponentialFunction)func2).getBase() == 1) return func1;
+        // one-element compound function case
+        if (func1.getType().equals("compound") && ((CompoundFunction)func1).functions.size() == 1) 
+            func1 = multiply(((CompoundFunction)func1).functions.get(0), func1.getCoefficient());
+        if (func2.getType().equals("compound") && ((CompoundFunction)func2).functions.size() == 1) 
+            func2 = multiply(((CompoundFunction)func2).functions.get(0), func2.getCoefficient());
+        // different type/input functions case (except compound)
         if (!func1.getType().equals("compound") && !func2.getType().equals("compound") &&
-            (!func1.getType().equals(func2.getType()) || ((func1.getInput() == null) ^ (func2.getInput() == null)) || (func1.getInput() != null && !func1.getInput().equals(func2.getInput())))) 
+            (!func1.getType().equals(func2.getType()) || ((func1.getInput() == null) ^ (func2.getInput() == null)) || 
+            (func1.getInput() != null && !func1.getInput().equals(func2.getInput())))) 
         {
             // power of the other
             if (func1.getInput() != null && func1.getType().equals("power") && func1.getInput().equals(func2.withoutCoeff()))
                 return new PowerFunction(func1.getCoefficient() * func2.getCoefficient(), func1.getInput(), ((PowerFunction)func1).getPower() + 1);
             if (func2.getInput() != null && func2.getType().equals("power") && func2.getInput().equals(func1.withoutCoeff()))
                 return new PowerFunction(func1.getCoefficient() * func2.getCoefficient(), func2.getInput(), ((PowerFunction)func2).getPower() + 1);
-            // exponential with identical input if without coefficient
-            if (func1.getType().equals("exponential") && func2.getType().equals("exponential") && ((func1.getInput() == null && func2.getInput() == null) ||
-                func1.getInput().withoutCoeff().equals(func2.getInput().withoutCoeff()))) {
-                    double base1 = Math.pow(((ExponentialFunction)func1).getBase(), func1.getInput() == null ? 0 : func1.getInput().getCoefficient());
-                    double base2 = Math.pow(((ExponentialFunction)func2).getBase(), func2.getInput() == null ? 0 : func2.getInput().getCoefficient());
-                    if (base1 * base2 == 1) return new ConstantFunction(func1.getCoefficient() * func2.getCoefficient());
-                    return new ExponentialFunction(func1.getCoefficient() * func2.getCoefficient(), func1.getInput().withoutCoeff(), base1 * base2);
+            // exponential
+            if (func1.getType().equals("exponential") && func2.getType().equals("exponential")) {
+                ExponentialFunction exp1 = (ExponentialFunction)func1, exp2 = (ExponentialFunction)func2;
+                // identical input if input without coefficient
+                if (((func1.getInput() == null && func2.getInput() == null) ||
+                    (func1.getInput() != null && func2.getInput() != null && func1.getInput().withoutCoeff().equals(func2.getInput().withoutCoeff())) && 
+                    (((Function.approxE(exp1.getBase())) != 0) == ((Function.approxE(exp2.getBase())) != 0)))) {
+                        double base1 = Math.pow(exp1.getBase(), func1.getInput() == null ? 0 : func1.getInput().getCoefficient());
+                        double base2 = Math.pow(exp2.getBase(), func2.getInput() == null ? 0 : func2.getInput().getCoefficient());
+                        if (base1 * base2 == 1) return new ConstantFunction(func1.getCoefficient() * func2.getCoefficient());
+                        return new ExponentialFunction(func1.getCoefficient() * func2.getCoefficient(), func1.getInput().withoutCoeff(), base1 * base2);
+                    }
+                // identical base
+                if (exp1.getBase() == exp2.getBase() || (Function.approxE(exp1.getBase()) != 0 && Function.approxE(exp1.getBase()) == Function.approxE(exp2.getBase())))
+                    return new ExponentialFunction(func1.getCoefficient() * func2.getCoefficient(), sum(func1.getInput(), func2.getInput()), ((ExponentialFunction)func1).getBase());
+                // e with different coefficient as base
+                if (Function.approxE(exp1.getBase()) != 0 && Function.approxE(exp2.getBase()) != 0) {
+                    ExponentialFunction coeff1 = new ExponentialFunction(func1.getCoefficient(), func1.getInput(), Function.approxE(exp1.getBase())),
+                                        e1 = new ExponentialFunction(func1.getCoefficient(), func1.getInput(), Math.E),
+                                        coeff2 = new ExponentialFunction(func2.getCoefficient(), func2.getInput(), Function.approxE(exp2.getBase())),
+                                        e2 = new ExponentialFunction(func2.getCoefficient(), func2.getInput(), Math.E);
+                    Function r = e1;
+                    r = multiply(r, e2);
+                    r = multiply(r, coeff1);
+                    r = multiply(r, coeff2);
+                    return r;
                 }
+            }
             // else
             return new CompoundFunction(true, func1.getCoefficient() * func2.getCoefficient(), new ArrayList<>(Arrays.asList(func1.withoutCoeff(), func2.withoutCoeff())));
         }
@@ -441,17 +518,29 @@ public class CompoundFunction extends Function{
                     }
                     return new CompoundFunction(true, func1.getCoefficient() * func2.getCoefficient(), new ArrayList<>(Arrays.asList(func1.withoutCoeff(), func2.withoutCoeff())));
                 }
-                
                 case "exponential" -> {
+                    Function inputFunction = func1.getInput();
+                    ExponentialFunction exp1 = (ExponentialFunction)func1, exp2 = (ExponentialFunction)func2;
+                    int eCoeff1 = approxE(exp1.getBase()), eCoeff2 = approxE(exp2.getBase());
+                    // same-coefficient e base
+                    if (eCoeff1 != 0 && eCoeff2 != 0) {
+                        ExponentialFunction coeff1 = new ExponentialFunction(func1.getCoefficient(), inputFunction, Function.approxE(exp1.getBase())),
+                                            coeff2 = new ExponentialFunction(func2.getCoefficient(), inputFunction, Function.approxE(exp2.getBase())),
+                                            e = new ExponentialFunction(func2.getCoefficient(), multiply(inputFunction, 2), Math.E);
+                        Function r = e;
+                        r = multiply(r, coeff1);
+                        r = multiply(r, coeff2);
+                        return r;
+                    }
                     double base;
-                    base = Math.pow(((ExponentialFunction)func1).getBase(), func1.getInput() == null ? 1 : func1.getInput().getCoefficient()) *
-                            Math.pow(((ExponentialFunction)func2).getBase(), func2.getInput() == null ? 1 : func2.getInput().getCoefficient());
+                    base = Math.pow(exp1.getBase(), func1.getInput() == null ? 1 : func1.getInput().getCoefficient()) *
+                            Math.pow(exp2.getBase(), func2.getInput() == null ? 1 : func2.getInput().getCoefficient());
                     if (base == 1) return new ConstantFunction(func1.getCoefficient() * func2.getCoefficient());
                     return new ExponentialFunction(func1.getCoefficient() * func2.getCoefficient(), func1.getInput() == null ? null : func1.getInput().withoutCoeff(), base);
                 }
             }
         }
-        // compound
+        // one compound
         if (func1.getType().equals("compound") && !func2.getType().equals("compound")) {
             if (((CompoundFunction)func1).compoundType) {
                 double coeff = func1.getCoefficient();
@@ -475,17 +564,45 @@ public class CompoundFunction extends Function{
                 return new CompoundFunction(true, coeff, newFunctions);
             }
             else {
-                double coeff = func1.getCoefficient() * func2.getCoefficient();
+                double coeff = func1.getCoefficient();
                 @SuppressWarnings("unchecked")
                 ArrayList<Function> newFunctions = (ArrayList<Function>)((CompoundFunction)func1).getFunctions().clone();
                 for (int i = 0; i < newFunctions.size(); i++)
-                    newFunctions.set(i, multiply(newFunctions.get(i), func2.withoutCoeff()));
+                    newFunctions.set(i, multiply(newFunctions.get(i), func2));
                 return new CompoundFunction(false, coeff, newFunctions);
             }
         }
         if (!func1.getType().equals("compound") && func2.getType().equals("compound")) return multiply(func2, func1);
-
-
+        // both compound
+        if (func1.getType().equals("compound") && func2.getType().equals("compound")) {
+            if (((CompoundFunction)func1).compoundType) {
+                if (((CompoundFunction)func2).compoundType) {
+                    Function r = func1;
+                    for (Function func: ((CompoundFunction)func2).functions) r = multiply(r, func);
+                    return r;
+                }
+                else {
+                    return multiply(func2, func1);
+                }
+            }
+            else {
+                if (((CompoundFunction)func2).compoundType) {
+                    @SuppressWarnings("unchecked")
+                    ArrayList<Function> newFunctions = (ArrayList<Function>)((CompoundFunction)func1).functions.clone();
+                    for (int i = 0; i < newFunctions.size(); i++) {
+                        newFunctions.set(i, multiply(newFunctions.get(i), func2.withoutCoeff()));
+                    }
+                    return new CompoundFunction(false, func1.getCoefficient() * func2.getCoefficient(), newFunctions);
+                }
+                else {
+                    ArrayList<Function> multiplyTemps = new ArrayList<>();
+                    for (Function func: ((CompoundFunction)func2).functions) multiplyTemps.add(multiply(func1, func));
+                    Function r = Function.ZERO;
+                    for (Function func: multiplyTemps)r = sum(r, func);
+                    return r;
+                }
+            }
+        }
         System.out.println("Unknown function types");
         return null;
     }
