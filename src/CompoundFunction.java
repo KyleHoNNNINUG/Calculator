@@ -538,6 +538,11 @@ public class CompoundFunction extends Function{
                     if (base == 1) return new ConstantFunction(func1.getCoefficient() * func2.getCoefficient());
                     return new ExponentialFunction(func1.getCoefficient() * func2.getCoefficient(), func1.getInput() == null ? null : func1.getInput().withoutCoeff(), base);
                 }
+                default -> {
+                    if (func1.withoutCoeff().equals(func2.withoutCoeff()))
+                        return new PowerFunction(func1.getCoefficient() * func2.getCoefficient(), func1.withoutCoeff(), 2);
+                    return new CompoundFunction(true, func1.getCoefficient() * func2.getCoefficient(), new ArrayList<>(Arrays.asList(func1.withoutCoeff(), func2.withoutCoeff())));
+                }
             }
         }
         // one compound
@@ -604,6 +609,7 @@ public class CompoundFunction extends Function{
             }
         }
         System.out.println("Unknown function types");
+        System.out.println(func1.getType() + " " + func2.getType());
         return null;
     }
 
