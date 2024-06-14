@@ -1,6 +1,8 @@
 public class TrigonometricFunction extends Function{
     private final String trigType;
 
+    public static String[] TRIG_TYPES = {"sin", "cos", "tan", "cot", "sec", "csc"};
+
     public TrigonometricFunction(double coefficient, Function input, String trigType) {
         super(coefficient, "trigonometric", input);
         this.trigType = trigType;

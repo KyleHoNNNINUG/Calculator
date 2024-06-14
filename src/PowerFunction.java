@@ -38,7 +38,7 @@ public class PowerFunction extends Function{
                 pow += this.power;
         }
         if (this.power != 0)
-            if (getInput() == null) {
+            if (getInput() == null || getInput().equals((Function)null)) {
                 String inner = "x" + pow;
                 if (this.power < 1) inner = "(" + inner + ")";
                 return coeff + inner;

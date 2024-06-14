@@ -2,14 +2,25 @@ public class Function {
     private final double coefficient;
     private final String type;
     private final Function input;
+    // 0 -> power rule
+    // 1 -> trigonometric rule
+    // 2 -> logarithmic rule
+    // 3 -> exponential rule
+    // 4 -> product rule
+    // 5 -> chain rule
+    private final int[] ruleCounts;
     
     public static final Function IDENTITY = new PowerFunction(1, null, 1); // x
     public static final Function ZERO = new Function(0, "zero", null); // 0
+    public static final String[] FUNCTION_TYPES = {"zero", "identity", "constant", "power", 
+                                                    "trigonometric", "logarithmic", "exponential", "compound"};
+    public static final String[] RULES = {"power", "trigonometric", "logarithmic", "exponential", "product", "chain"};
 
     public Function(double coefficient, String type, Function input) {
         this.coefficient = coefficient;
         this.type = type;
         this.input = input;
+        this.ruleCounts = new int[6];
     }
 
     public double getCoefficient() {
@@ -20,6 +31,66 @@ public class Function {
     }
     public Function getInput() {
         return this.input;
+    }
+    public int getRuleCount(String rule) {
+        for (int i = 0; i < this.ruleCounts.length; i++) {
+            if (Function.RULES[i].equals(rule)) return this.ruleCounts[i];
+        }
+        System.out.println("Unknown derivative rule");
+        return 0;
+    }
+    public int[] getRuleCounts() {
+        return this.ruleCounts;
+    }
+    private void addRuleCount(String rule, int count) {
+        for (int i = 0; i < this.ruleCounts.length; i++) {
+            if (Function.RULES[i].equals(rule)) {
+                this.ruleCounts[i] += count;
+                return;
+            }
+        }
+        System.out.println("Unknown derivative rule");
+    }
+    private void addRuleCounts(int[] ruleCountsToAdd) {
+        if (this.ruleCounts.length != ruleCountsToAdd.length) {
+            System.out.println("Invalid rule count array");
+            return;
+        }
+        for (int i = 0; i < this.ruleCounts.length; i++) {
+            this.ruleCounts[i] += ruleCountsToAdd[i];
+        }
+    }
+    private void computeRuleCount() {
+        for (int i = 0; i < this.ruleCounts.length; i++) {
+            this.ruleCounts[i] = 0;
+        }
+        switch(this.type) {
+            case "zero" -> {}
+            case "identity" -> {
+                addRuleCount("power", 1);
+            }
+            case "compound" -> {
+                if (((CompoundFunction)this).getCompoundType().equals("multiply")) addRuleCount("product", 1);
+                for (Function func: ((CompoundFunction)this).getFunctions()) {
+                    func.computeRuleCount();
+                    addRuleCounts(func.ruleCounts);
+                }
+            }
+            default -> {
+                addRuleCount(this.type, 1);
+                if (this.input != null && !this.input.equals((Function)null)) {
+                    addRuleCount("chain", 1);
+                    this.input.computeRuleCount();
+                    addRuleCounts(this.input.ruleCounts);
+                }
+            }
+        }
+    }
+    public void printRuleCount() {
+        computeRuleCount();
+        for (int i = 0; i < this.ruleCounts.length; i++) {
+            System.out.println(Function.RULES[i] + " rule: " + this.ruleCounts[i]);
+        }
     }
 
     protected static int approxE(double num) {
