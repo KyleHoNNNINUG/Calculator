@@ -113,9 +113,16 @@ public class Test {
         return null;
     }
     public static Function constructGuessDerivative() {
-        Function guess = constructFunction("Take the derivative of the function and enter the answer as a function:\n");
-        
-
+        System.out.println("Take the derivative of the function and enter the answer as a function.");
+        Function guess = constructFunction();
+        boolean boolExistingBecuzJavaIsStupidAndCannotAcceptUnreachableCode = true;
+        while(boolExistingBecuzJavaIsStupidAndCannotAcceptUnreachableCode) {
+            String[] options = {"y", "n"};
+            String respond = requestString("The function you put was " + guess + "; confirm? (y/n) ", "Invalid response; enter again (y/n): ", options);
+            if (respond.equals("y")) break;
+            guess = constructFunction();
+        }
+        System.out.println("Your answer is " + guess);
         return guess;
     }
     
@@ -123,10 +130,11 @@ public class Test {
         Function test = constructFunction();
         System.out.println();
         System.out.println("Function: " + test);
-        System.out.println("Derivative: " + Function.getDerivative(test));
+        Function guess = constructGuessDerivative();
+        Function answer = Function.getDerivative(test);
+        if (guess.equals(answer)) System.out.println("Correct!");
+        else System.out.println("Incorrect; the answer is " + answer);
         System.out.println("Number of derivative rules used:");
         test.printRuleCount();
     }
 }
-
-//x^2+xsinx+(1/4)cos^2(x)
